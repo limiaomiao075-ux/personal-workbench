@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#146c5b">
+  <title>个人工作台</title>
+  <style>
+    :root { --ink:#1d2a2b; --muted:#697675; --line:#d9e2df; --paper:#ffffff; --canvas:#f3f6f4; --accent:#146c5b; --accent-dark:#0d5044; --alert:#b6422d; --alert-bg:#fff0eb; --sun:#d88b16; --shadow:0 10px 30px rgba(18, 49, 43, .08); }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:var(--canvas); font:15px/1.5 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif; }
+    button,input { font:inherit; }
+    button { cursor:pointer; }
+    .shell { width:min(1120px, calc(100% - 32px)); margin:auto; }
+    header { padding:38px 0 28px; }
+    .eyebrow { margin:0 0 8px; color:var(--accent); font-weight:750; font-size:13px; }
+    h1 { margin:0; font-size:clamp(28px,5vw,42px); line-height:1.1; letter-spacing:0; }
+    .intro { max-width:660px; margin:12px 0 0; color:var(--muted); }
+    main { display:grid; gap:20px; padding-bottom:48px; }
+    section { background:var(--paper); border:1px solid var(--line); border-radius:8px; box-shadow:var(--shadow); overflow:hidden; }
+    .section-head { display:flex; gap:16px; justify-content:space-between; align-items:flex-end; padding:24px 26px 20px; border-bottom:1px solid var(--line); }
+    h2 { margin:0; font-size:20px; letter-spacing:0; }
+    .section-head p { margin:4px 0 0; color:var(--muted); font-size:14px; }
+    .panel { padding:24px 26px; }
+    .upload { display:grid; place-items:center; min-height:168px; border:1.5px dashed #90aea7; border-radius:6px; background:#f8fbfa; text-align:center; transition:.18s ease; }
+    .upload.drag { background:#e7f3ef; border-color:var(--accent); }
+    .upload p { margin:0 0 12px; color:var(--muted); }
+    .button, .file-label { display:inline-flex; min-height:40px; align-items:center; justify-content:center; gap:8px; padding:8px 14px; border:1px solid var(--accent); border-radius:5px; background:var(--accent); color:#fff; font-weight:700; text-decoration:none; }
+    .button:hover,.file-label:hover { background:var(--accent-dark); border-color:var(--accent-dark); }
+    .button.secondary { background:#fff; color:var(--accent); }
+    .button.secondary:hover { color:#fff; }
+    input[type=file] { position:absolute; width:1px; height:1px; opacity:0; }
+    .file-note { margin:12px 0 0; color:var(--muted); font-size:13px; text-align:center; }
+    .status { min-height:22px; margin:16px 0 0; color:var(--muted); font-size:14px; }
+    .status.error { color:var(--alert); }
+    .analysis { display:none; }
+    .analysis.show { display:block; }
+    .stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
+    .stat { padding:15px; border:1px solid var(--line); border-radius:6px; background:#fbfcfb; }
+    .stat b { display:block; color:var(--muted); font-size:12px; font-weight:650; }
+    .stat strong { display:block; margin-top:4px; font-size:22px; line-height:1.2; font-variant-numeric:tabular-nums; }
+    .toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; margin:0 0 12px; }
+    .toolbar small { color:var(--muted); }
+    .toolbar-actions { display:flex; flex-wrap:wrap; gap:10px; }
+    .fill-guide { display:flex; flex-wrap:wrap; gap:14px; justify-content:space-between; align-items:center; margin-top:20px; padding-top:18px; border-top:1px solid var(--line); }
+    .fill-guide h3 { margin:0; font-size:16px; }
+    .fill-guide p { max-width:690px; margin:4px 0 0; color:var(--muted); font-size:14px; }
+    .fill-controls { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:12px; }
+    .fill-controls select { padding:9px; border:1px solid #aebdb8; border-radius:5px; background:#fff; font:inherit; max-width:100%; }
+    .fill-note { color:var(--muted); font-size:14px; }
+    .fill-plan { display:grid; gap:7px; margin:10px 0 0; padding:0; list-style:none; }
+    .fill-item { display:grid; grid-template-columns:minmax(130px,1fr) auto auto; gap:10px; align-items:center; padding:9px 10px; border:1px solid var(--line); border-radius:5px; }
+    .fill-item small { color:var(--muted); font-variant-numeric:tabular-nums; }
+    .fill-item .button { min-height:34px; padding:5px 10px; }
+    .refund-actions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; margin:14px 0 12px; }
+    .refund-actions p { margin:0; color:var(--muted); font-size:14px; }
+    .refund-table { display:none; }
+    .refund-table.show { display:block; }
+    .refund-table table { min-width:980px; }
+    .refund-table th,
+    .refund-table td { text-align:center; vertical-align:middle; }
+    .refund-table td.number { text-align:center; }
+    .refund-table td[rowspan] { vertical-align:middle; background:#f8fbfa; font-weight:700; }
+    .refund-select { min-width:72px; padding:6px 26px 6px 8px; border:1px solid #aebdb8; border-radius:4px; background:#fff; color:var(--ink); font:inherit; text-align:center; }
+    .guild-result { display:none; }
+    .guild-result.show { display:block; }
+    .guild-result th,
+    .guild-result td { text-align:center; vertical-align:middle; }
+    .guild-result td.number { text-align:center; }
+    .stat { min-width:0; }
+    .stat strong { overflow-wrap:anywhere; }
+    .table-wrap { overflow:auto; border:1px solid var(--line); border-radius:6px; }
+    table { width:100%; border-collapse:collapse; min-width:610px; }
+    th,td { padding:11px 13px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; }
+    th { background:#f2f7f5; color:#36534c; font-size:13px; }
+    td.number { text-align:right; font-variant-numeric:tabular-nums; }
+    tr:last-child td { border-bottom:0; }
+    tr.over td { background:var(--alert-bg); color:#852a1d; }
+    .ratio { font-weight:750; }
+    .todo-bar { display:grid; grid-template-columns:1fr auto; gap:10px; }
+    .todo-input { width:100%; min-height:42px; padding:8px 11px; border:1px solid #aebdb8; border-radius:5px; color:var(--ink); }
+    .todo-input:focus { outline:3px solid #cbe4dd; border-color:var(--accent); }
+    .todo-edit { min-height:36px; }
+    .todo-list { display:grid; gap:8px; margin:18px 0 0; padding:0; list-style:none; }
+    .todo { display:grid; grid-template-columns:auto 1fr auto auto; gap:7px; align-items:center; min-height:50px; padding:8px 10px; border:1px solid var(--line); border-radius:6px; }
+    .todo.done span { color:var(--muted); text-decoration:line-through; }
+    .todo input[type=checkbox] { width:18px; height:18px; accent-color:var(--accent); }
+    .todo span { overflow-wrap:anywhere; }
+    .icon { width:34px; height:34px; border:0; border-radius:5px; background:transparent; color:#657370; font-size:20px; }
+    .icon:hover { color:var(--accent); background:#e7f3ef; }
+    .icon.delete:hover { color:var(--alert); background:#fff0eb; }
+    button:disabled { cursor:not-allowed; opacity:.5; }
+    .empty { margin:18px 0 0; color:var(--muted); text-align:center; }
+    footer { padding:0 0 28px; color:var(--muted); font-size:13px; }
+    @media (max-width:700px) { .shell{width:min(100% - 24px,1120px)} header{padding:27px 0 20px}.section-head,.panel{padding-left:16px;padding-right:16px}.section-head{align-items:flex-start;flex-direction:column}.stat-grid{grid-template-columns:repeat(2,1fr)}.stat strong{font-size:19px}.todo-bar{grid-template-columns:1fr}.todo-bar .button,.fill-guide>.button{width:100%}.fill-guide{align-items:stretch}.fill-item{grid-template-columns:1fr auto}.fill-item small{grid-column:1/-1}.fill-item .button{width:auto} }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <p class="eyebrow">PERSONAL DESK</p>
+      <h1>个人工作台</h1>
+      <p class="intro">把日常填表、报表汇总和待办放在一个轻量页面里。导入的数据只在当前浏览器处理，不会上传或保存到网站。</p>
+    </header>
+    <main>
+      <section aria-labelledby="form-title">
+        <div class="section-head"><div><h2 id="form-title">1. 平时填表工作处理</h2><p>导入后台导出的游戏统计报表，生成可复制的汇总数据。</p></div></div>
+        <div class="panel">
+          <div class="upload" id="dropZone">
+            <div><p>拖入报表，或从设备中选择文件</p><label class="file-label" for="fileInput">选择报表</label><input id="fileInput" type="file" accept=".csv,.xls,text/csv,application/vnd.ms-excel"></div>
+          </div>
+          <p class="file-note">支持普通 CSV，以及后台导出但后缀为 CSV 的旧版 Excel 报表。</p>
+          <p class="status" id="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="analysis" id="analysis" aria-labelledby="analysis-title">
+        <div class="section-head"><div><h2 id="analysis-title">2. 数据分析</h2><p>按产投比从高到低排序。产投比超过 100% 的游戏以浅红色突出显示。</p></div></div>
+        <div class="panel">
+          <div class="stat-grid">
+            <div class="stat"><b>游戏数</b><strong id="gameCount">0</strong></div>
+            <div class="stat"><b>总投入</b><strong id="totalInput">0</strong></div>
+            <div class="stat"><b>总产出</b><strong id="totalOutput">0</strong></div>
+            <div class="stat"><b>总条数</b><strong id="totalRows">0</strong></div>
+          </div>
+          <div class="toolbar"><small id="tableHint"></small><button class="button secondary" id="copyButton" type="button" title="复制当前按产投比排序的分析表">复制排序分析结果</button></div>
+          <div class="table-wrap"><table><thead><tr><th>游戏名称</th><th class="number">总投入</th><th class="number">总产出</th><th class="number">总条数</th><th class="number">产投比</th></tr></thead><tbody id="summaryBody"></tbody></table></div>
+          <div class="fill-guide"><div><h3>腾讯文档填表</h3><p>每个游戏只复制“人数／人次、投入、产出”3 格，产投行保留腾讯文档里的公式。人数按报表条数统计；日期只用于定位，请确认后台报表的查询日期一致。</p><div class="fill-controls"><label for="reportDate">填表日期</label><select id="reportDate"><option value="">请选择模板中的日期</option></select><button class="button" id="copyTencentButton" type="button" disabled>复制第 1 个游戏（3 格）</button></div><p id="pasteTarget" aria-live="polite"></p><p id="mappingStatus" aria-live="polite"></p><p id="templateOrder"></p><details><summary>查看 15 个粘贴范围</summary><ol class="fill-plan" id="fillPlan"></ol><p>每次只粘贴连续 3 格，下一行的产投公式不会被覆盖。</p></details></div></div>
+        </div>
+      </section>
+
+      <section aria-labelledby="refund-title">
+        <div class="section-head"><div><h2 id="refund-title">3. 退款处理</h2><p>导入退款统计表，自动整理成填表格式并统一时间格式。</p></div></div>
+        <div class="panel">
+          <div class="upload" id="refundDropZone">
+            <div><p>拖入退款统计表，或从设备中选择文件</p><label class="file-label" for="refundFileInput">选择退款表</label><input id="refundFileInput" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
+          </div>
+          <p class="file-note">仅在当前浏览器读取 Excel 文件，不会上传或保存到网站。</p>
+          <p class="status" id="refundStatus" aria-live="polite"></p>
+          <div class="refund-table" id="refundResult">
+            <div class="refund-actions"><p id="refundHint"></p><button class="button secondary" id="copyRefundButton" type="button">复制填表数据</button></div>
+            <div class="table-wrap"><table><thead><tr><th>ID</th><th>订单号</th><th class="number">退款金额</th><th>是否进入公会</th><th>公会ID</th><th>公会长ID</th><th>购买时间</th><th>退款时间</th></tr></thead><tbody id="refundBody"></tbody></table></div>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="guild-stats-title">
+        <div class="section-head"><div><h2 id="guild-stats-title">4. 公会统计</h2><p>同时导入多份公会报表，按日期统计公会数量。</p></div></div>
+        <div class="panel">
+          <div class="upload" id="guildDropZone">
+            <div><p>拖入多份公会报表，或从设备中选择文件</p><label class="file-label" for="guildFileInput">选择公会报表</label><input id="guildFileInput" type="file" multiple accept=".csv,.tsv,.xls,.xlsx,text/csv,text/tab-separated-values,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
+          </div>
+          <p class="file-note">可分多次继续添加，结果自动累计；表内日期优先，没有日期列时读取文件名中的完整日期。</p>
+          <p class="status" id="guildStatus" aria-live="polite"></p>
+          <div class="guild-result" id="guildResult">
+            <div class="stat-grid">
+              <div class="stat"><b>已读取文件</b><strong id="guildFileCount">0</strong></div>
+              <div class="stat"><b>统计天数</b><strong id="guildDayCount">0</strong></div>
+              <div class="stat"><b>公会总数</b><strong id="guildTotalCount">0</strong></div>
+              <div class="stat"><b>计数规则</b><strong>每行 1 个</strong></div>
+            </div>
+            <div class="toolbar"><small id="guildHint"></small><div class="toolbar-actions"><button class="button secondary" id="clearGuildButton" type="button">清空统计</button><button class="button secondary" id="copyGuildButton" type="button">复制统计结果</button></div></div>
+            <div class="table-wrap"><table><thead><tr><th>日期</th><th>公会数量</th></tr></thead><tbody id="guildBody"></tbody></table></div>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="todo-title">
+        <div class="section-head"><div><h2 id="todo-title">5. 待办清单</h2><p>待办和勾选状态只保存在当前浏览器中。</p></div></div>
+        <div class="panel">
+          <form class="todo-bar" id="todoForm"><input class="todo-input" id="todoInput" maxlength="200" autocomplete="off" placeholder="输入待办事项"><button class="button" type="submit">新增待办</button></form>
+          <ul class="todo-list" id="todoList"></ul><p class="empty" id="todoEmpty">还没有待办事项。</p>
+        </div>
+      </section>
+    </main>
+    <footer>本页面不使用外部资源。报表导入仅在本地浏览器内处理。</footer>
+  </div>
+  <script>
+  (() => {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const money = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 0 });
+    const status = $('status'), analysis = $('analysis'), body = $('summaryBody');
+    const tencentGames = ['PyramidSlot','FishingStar','BountyRacing','LUDO','CrashPro','CamelRacing','DragonTiger2','Lord Of Olympus','Mole Star','Yummy','Fruit77','Greedy Cat','MahjongSlot','LuckyGem','ChickenRun'];
+    const templateGameLabels = ['PyramidSlot','fishing','BountyRacing','ludo','crash pro','CamelRacing','DragonTiger2','Lord Of Olympus','Mole Star','Yummy','Fruit77','Greedy Cat','MahjongSlot','LuckyGem','ChickenRun'];
+    let latestSummary=[], copyStep=0, currentBlocks=[];
+    const templateDates = Array.from({length:7},(_,i)=>{const d=new Date(Date.UTC(2026,8,28+7+i));return {date:d.toISOString().slice(0,10),column:String.fromCharCode(74+i)};});
+    $('reportDate').innerHTML+=templateDates.map(x=>`<option value="${x.date}">${x.date}（${x.column}列）</option>`).join('');
+    $('templateOrder').textContent='模板游戏顺序：'+templateGameLabels.join(' → ');
+    const required = { game:['游戏名称','游戏名','game name'], input:['投入','总投入','input'], output:['产出','总产出','output'] };
+    const normalize = v => String(v ?? '').trim().toLowerCase().replace(/[\s_\-]/g, '');
+    const number = value => { const n = Number(String(value ?? '').replace(/[,%\s]/g, '')); return Number.isFinite(n) ? n : 0; };
+    const setStatus = (text, bad=false) => { status.textContent=text; status.className='status'+(bad?' error':''); };
+    const escape = v => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    async function copyText(text) { if(navigator.clipboard&&window.isSecureContext){try{await navigator.clipboard.writeText(text);return;}catch{}}const area=document.createElement('textarea');area.value=text;area.setAttribute('readonly','');area.style.cssText='position:fixed;opacity:0';document.body.append(area);area.select();const ok=document.execCommand('copy');area.remove();if(!ok)throw Error('复制失败'); }
+    function tencentBlocks(list, column) {
+      const lookup=new Map(list.map(x=>[normalize(x.name),x]));
+      const missing=tencentGames.filter(name=>!lookup.has(normalize(name)));
+      if(missing.length)throw Error('报表缺少游戏：'+missing.join('、')+'。请确认导出范围，暂不能整列复制。');
+      return tencentGames.map((name,index)=>{const x=lookup.get(normalize(name)),start=83+index*4;return {name:templateGameLabels[index],start,end:start+2,target:`${column}${start}:${column}${start+2}`,text:[x.count,x.input,x.output].join('\n')};});
+    }
+    function updateCopyButton() {
+      const selected=templateDates.find(x=>x.date===$('reportDate').value), block=currentBlocks[copyStep];
+      $('copyTencentButton').disabled=!selected||!block;
+      $('copyTencentButton').textContent=block?`复制第 ${copyStep+1} 个：${block.name}（3 格）`:'复制第 1 个游戏（3 格）';
+    }
+    function updateTencent() {
+      const selected=templateDates.find(x=>x.date===$('reportDate').value);
+      copyStep=0;currentBlocks=[];
+      $('pasteTarget').textContent=selected?`从 ${selected.column}83:${selected.column}85 开始，每个游戏粘贴 3 格；产投公式行保持不动。`:'请选择填表日期。模板之外的日期需要更新列位置。';
+      try{if(!selected)throw Error('选择日期后会生成 15 个三格粘贴范围。');currentBlocks=tencentBlocks(latestSummary,selected.column);$('mappingStatus').textContent='已按模板顺序匹配 15 个游戏，只填人数、投入和产出。';$('fillPlan').innerHTML=currentBlocks.map((x,i)=>`<li class="fill-item"><b>${i+1}. ${escape(x.name)}</b><small>${x.target}：人数、投入、产出</small><button class="button secondary" type="button" data-copy-block="${i}">复制 3 格</button></li>`).join('');}
+      catch(e){$('fillPlan').innerHTML='';$('mappingStatus').textContent=e.message;}
+      updateCopyButton();
+    }
+    $('reportDate').onchange=updateTencent;
+
+    function csvRows(text) {
+      const sample=(text.split(/\r?\n/).find(line=>line.trim())||'').slice(0,4096);let headerQuote=false;const counts={',':0,'\t':0,';':0};for(let i=0;i<sample.length;i++){if(sample[i]==='"')headerQuote=!headerQuote;else if(!headerQuote&&sample[i] in counts)counts[sample[i]]++;}const ranked=Object.entries(counts).sort((a,b)=>b[1]-a[1]),delimiter=ranked[0][1]?ranked[0][0]:',';
+      const rows=[]; let row=[], cell='', quote=false;
+      for (let i=0;i<text.length;i++) { const c=text[i], next=text[i+1];
+        if (c==='"') { if (quote && next==='"') { cell+='"'; i++; } else quote=!quote; }
+        else if (c===delimiter && !quote) { row.push(cell.trim()); cell=''; }
+        else if ((c==='\n' || c==='\r') && !quote) { if(c==='\r'&&next==='\n')i++; row.push(cell.trim()); if(row.some(Boolean))rows.push(row); row=[]; cell=''; }
+        else cell+=c;
+      }
+      row.push(cell.trim()); if(row.some(Boolean)) rows.push(row); return rows;
+    }
+    function latin1(bytes, start, length) { let s=''; for(let i=start;i<start+length;i++)s+=String.fromCharCode(bytes[i]); return s; }
+    function utf16(bytes, start, length) { let s=''; for(let i=start;i<start+length;i+=2)s+=String.fromCharCode(bytes[i]|(bytes[i+1]<<8)); return s; }
+    function readSst(bytes, off, end) {
+      let pos=off, count=bytes[pos]|(bytes[pos+1]<<8); pos+=2; const flags=bytes[pos++]; const wide=flags&1, rich=flags&8, ext=flags&4;
+      let runs=0, extLen=0; if(rich){runs=bytes[pos]|(bytes[pos+1]<<8);pos+=2;} if(ext){extLen=(bytes[pos]|(bytes[pos+1]<<8)|(bytes[pos+2]<<16)|(bytes[pos+3]<<24))>>>0;pos+=4;}
+      const size=count*(wide?2:1); if(pos+size>end) throw Error('报表中字符串跨区段，无法读取。'); const text=wide?utf16(bytes,pos,size):latin1(bytes,pos,size); return { text, next:pos+size+runs*4+extLen };
+    }
+    function xlsRows(buffer) {
+      const b=new Uint8Array(buffer), dv=new DataView(buffer); if(dv.getUint32(0,true)!==0xE011CFD0) throw Error('文件格式不正确。');
+      const sector=1<<dv.getUint16(30,true), miniSector=1<<dv.getUint16(32,true), fatCount=dv.getUint32(44,true), dirStart=dv.getInt32(48,true), miniCut=dv.getUint32(56,true), miniFatStart=dv.getInt32(60,true), miniFatCount=dv.getUint32(64,true), difStart=dv.getInt32(68,true), difCount=dv.getUint32(72,true);
+      const sectorAt=n => 512+n*sector, readChain=(start, table, size) => { let out=[], seen=new Set(), n=start; while(n>=0&&n!==-2&&!seen.has(n)){seen.add(n);const p=sectorAt(n);out.push(...b.slice(p,p+sector));n=table[n];if(size&&out.length>=size)break;}return new Uint8Array(out.slice(0,size||out.length)); };
+      let dif=[]; for(let i=0;i<109;i++){const x=dv.getInt32(76+i*4,true);if(x>=0)dif.push(x);} let cur=difStart; for(let i=0;i<difCount&&cur>=0;i++){const p=sectorAt(cur);for(let j=0;j<sector/4-1;j++)dif.push(dv.getInt32(p+j*4,true));cur=dv.getInt32(p+sector-4,true);}
+      let fat=[]; for(const s of dif.slice(0,fatCount)){const p=sectorAt(s);for(let j=0;j<sector/4;j++)fat.push(dv.getInt32(p+j*4,true));}
+      const dir=readChain(dirStart,fat), entries=[]; for(let p=0;p+128<=dir.length;p+=128){const len=dir[p+64]|(dir[p+65]<<8);if(len>2){entries.push({name:utf16(dir,p,len-2),type:dir[p+66],start:new DataView(dir.buffer,dir.byteOffset+p+116,4).getInt32(0,true),size:new DataView(dir.buffer,dir.byteOffset+p+120,8).getUint32(0,true)});}}
+      const root=entries.find(e=>e.type===5), book=entries.find(e=>/^(Workbook|Book)$/i.test(e.name)); if(!book)throw Error('未找到报表工作簿。');
+      let miniFat=[]; if(miniFatCount){const mf=readChain(miniFatStart,fat);for(let p=0;p+4<=mf.length;p+=4)miniFat.push(new DataView(mf.buffer,mf.byteOffset+p,4).getInt32(0,true));} const rootData=root?readChain(root.start,fat,root.size):null;
+      const bookData=book.size<miniCut&&rootData ? (()=>{let out=[],seen=new Set(),q=book.start;while(q>=0&&q!==-2&&!seen.has(q)){seen.add(q);out.push(...rootData.slice(q*miniSector,q*miniSector+miniSector));q=miniFat[q];}return new Uint8Array(out.slice(0,book.size));})() : readChain(book.start,fat,book.size);
+      let p=0, sst=[]; const sheets=[]; while(p+4<=bookData.length){const type=bookData[p]|(bookData[p+1]<<8), len=bookData[p+2]|(bookData[p+3]<<8), data=p+4, end=data+len; if(end>bookData.length)break;
+        if(type===0x0085){ const pos=bookData[data]|(bookData[data+1]<<8)|(bookData[data+2]<<16)|(bookData[data+3]<<24), count=bookData[data+6], flag=bookData[data+7], name=flag?utf16(bookData,data+8,count*2):latin1(bookData,data+8,count); sheets.push({pos,name}); }
+        if(type===0x00fc){ let q=data+8, left=(bookData[data+4]|(bookData[data+5]<<8)|(bookData[data+6]<<16)|(bookData[data+7]<<24))>>>0; while(left&&q<bookData.length){try{const value=readSst(bookData,q,bookData.length);sst.push(value.text);q=value.next;left--;}catch{break;}} } p=end; }
+      if(!sheets.length)throw Error('报表中没有工作表。'); const sheet=sheets[0], cells=[]; p=sheet.pos; while(p+4<=bookData.length){const type=bookData[p]|(bookData[p+1]<<8), len=bookData[p+2]|(bookData[p+3]<<8), d=p+4, end=d+len;if(end>bookData.length)break;if(type===0x000a)break;
+        const cell=(r,c,v)=>{if(!cells[r])cells[r]=[];cells[r][c]=v;}; if(type===0x00fd){const r=bookData[d]|(bookData[d+1]<<8),c=bookData[d+2]|(bookData[d+3]<<8),idx=bookData[d+6]|(bookData[d+7]<<8)|(bookData[d+8]<<16)|(bookData[d+9]<<24);cell(r,c,sst[idx]??'');}
+        else if(type===0x0203){const r=bookData[d]|(bookData[d+1]<<8),c=bookData[d+2]|(bookData[d+3]<<8);cell(r,c,new DataView(bookData.buffer,bookData.byteOffset+d+6,8).getFloat64(0,true));}
+        else if(type===0x027e){const r=bookData[d]|(bookData[d+1]<<8),c=bookData[d+2]|(bookData[d+3]<<8),rk=bookData[d+6]|(bookData[d+7]<<8)|(bookData[d+8]<<16)|(bookData[d+9]<<24);let v=rk&2?(rk>>2):new DataView(new Uint8Array([0,0,0,0,bookData[d+9],bookData[d+8],bookData[d+7],bookData[d+6]]).buffer).getFloat64(0,false);cell(r,c,(rk&1)?v/100:v);}
+        p=end; }
+      return cells.filter(Boolean);
+    }
+    async function xlsxRows(buffer) {
+      const b=new Uint8Array(buffer),dv=new DataView(buffer);let eocd=-1;
+      for(let i=b.length-22;i>=Math.max(0,b.length-65557);i--){if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;}}
+      if(eocd<0)throw Error('无法读取退款表，请确认文件是有效的 .xlsx。');
+      const count=dv.getUint16(eocd+10,true),entries=new Map();let p=dv.getUint32(eocd+16,true);
+      for(let i=0;i<count;i++){if(dv.getUint32(p,true)!==0x02014b50)throw Error('退款表压缩目录损坏。');const method=dv.getUint16(p+10,true),size=dv.getUint32(p+20,true),nameLen=dv.getUint16(p+28,true),extraLen=dv.getUint16(p+30,true),commentLen=dv.getUint16(p+32,true),offset=dv.getUint32(p+42,true),name=new TextDecoder().decode(b.slice(p+46,p+46+nameLen));entries.set(name,{method,size,offset});p+=46+nameLen+extraLen+commentLen;}
+      async function textFile(name){const e=entries.get(name);if(!e)return '';const n=e.offset;if(dv.getUint32(n,true)!==0x04034b50)throw Error('退款表文件结构损坏。');const nameLen=dv.getUint16(n+26,true),extraLen=dv.getUint16(n+28,true),start=n+30+nameLen+extraLen,packed=b.slice(start,start+e.size);let raw;if(e.method===0)raw=packed;else if(e.method===8){try{const stream=new Blob([packed]).stream().pipeThrough(new DecompressionStream('deflate-raw'));raw=new Uint8Array(await new Response(stream).arrayBuffer());}catch{throw Error('当前浏览器无法解压 .xlsx，请使用最新版 Chrome。');}}else throw Error('退款表使用了不支持的压缩格式。');return new TextDecoder('utf-8').decode(raw);}
+      const parse=xml=>{const doc=new DOMParser().parseFromString(xml,'application/xml');if(doc.getElementsByTagName('parsererror').length)throw Error('退款表内容无法解析。');return doc;};
+      const shared=[];const sharedXml=await textFile('xl/sharedStrings.xml');if(sharedXml){const doc=parse(sharedXml);for(const si of doc.getElementsByTagNameNS('*','si'))shared.push([...si.getElementsByTagNameNS('*','t')].map(x=>x.textContent||'').join(''));}
+      const sheetName=[...entries.keys()].filter(x=>/^xl\/worksheets\/sheet\d+\.xml$/i.test(x)).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}))[0];if(!sheetName)throw Error('退款表中没有工作表。');
+      const doc=parse(await textFile(sheetName)),rows=[];for(const row of doc.getElementsByTagNameNS('*','row')){const out=[];for(const cell of row.getElementsByTagNameNS('*','c')){const ref=cell.getAttribute('r')||'',letters=(ref.match(/^[A-Z]+/i)||['A'])[0].toUpperCase();let col=0;for(const ch of letters)col=col*26+ch.charCodeAt(0)-64;col--;const type=cell.getAttribute('t')||'',v=cell.getElementsByTagNameNS('*','v')[0]?.textContent??'',inline=[...cell.getElementsByTagNameNS('*','t')].map(x=>x.textContent||'').join('');out[col]=type==='s'?(shared[Number(v)]??''):type==='inlineStr'?inline:v;}rows.push(out);}
+      return rows;
+    }
+    const refundFields={id:['erbanNo','ID'],order:['订单编号','订单号'],guild:['公会id','公会ID'],leader:['公会长id','公会长ID'],purchase:['消费时间','购买时间'],refundTime:['退款时间'],amount:['退款金额']};
+    function formatRefundTime(value){const text=String(value??'').trim();if(!text)return '';const match=text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/);if(match)return `${match[1]}/${Number(match[2])}/${Number(match[3])} ${String(match[4]??0).padStart(2,'0')}:${String(match[5]??0).padStart(2,'0')}:${String(match[6]??0).padStart(2,'0')}`;if(/^\d+(?:\.\d+)?$/.test(text)){const d=new Date((Number(text)-25569)*86400000);if(!Number.isNaN(d.getTime()))return `${d.getUTCFullYear()}/${d.getUTCMonth()+1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}:${String(d.getUTCSeconds()).padStart(2,'0')}`;}throw Error(`无法识别时间：${text}`);}
+    let refundOutput=[],refundGroupSizes=new Map();
+    function refundTableHtml(interactive=false){const seen=new Set(),cellStyle='text-align:center;vertical-align:middle;';return `<table><tbody>${refundOutput.map((row,rowIndex)=>{const id=row[0],first=!seen.has(id);seen.add(id);const cells=row.slice(1).map((v,i)=>{if(interactive&&first&&i===2)return `<td><select class="refund-select" data-refund-status="${rowIndex}" aria-label="${escape(id)} 是否进入公会"><option value=""${v===''?' selected':''}></option><option value="是"${v==='是'?' selected':''}>是</option><option value="否"${v==='否'?' selected':''}>否</option></select></td>`;return `<td${interactive?'':` style="${cellStyle}"`}>${escape(v)}</td>`;}).join('');return `<tr>${first?`<td rowspan="${refundGroupSizes.get(id)}"${interactive?'':` style="${cellStyle}"`}>${escape(id)}</td>`:''}${cells}</tr>`;}).join('')}</tbody></table>`;}
+    function refundPlainText(){let prior=null;return refundOutput.map(row=>{const out=[row[0]===prior?'':row[0],...row.slice(1)];prior=row[0];return out.join('\t');}).join('\n');}
+    function prepareRefund(rows,filename){
+      const headerRow=rows.findIndex(row=>{const values=row.map(normalize);return values.includes(normalize('erbanNo'))&&values.some(x=>[normalize('订单编号'),normalize('订单号')].includes(x));});
+      if(headerRow<0)throw Error('未找到 erbanNo 和订单编号列，请确认导入的是退款统计表。');
+      const heads=rows[headerRow].map(normalize),index={};
+      for(const [key,names] of Object.entries(refundFields)){index[key]=heads.findIndex(h=>names.map(normalize).includes(h));if(index[key]<0)throw Error(`退款表缺少“${names[0]}”列。`);}
+      const raw=rows.slice(headerRow+1).filter(row=>String(row[index.id]??'').trim()||String(row[index.order]??'').trim()).map(row=>{const guild=String(row[index.guild]??'').trim(),leader=String(row[index.leader]??'').trim();return [String(row[index.id]??'').trim(),String(row[index.order]??'').trim(),String(row[index.amount]??'').trim(),'',guild,leader,formatRefundTime(row[index.purchase]),formatRefundTime(row[index.refundTime])];});
+      if(!raw.length)throw Error('退款表没有可处理的数据。');
+      const groups=new Map();for(const row of raw){if(!groups.has(row[0]))groups.set(row[0],[]);groups.get(row[0]).push(row);}
+      for(const items of groups.values()){const guildRow=items.find(row=>row[4]||row[5]);items.forEach((row,i)=>{row[3]=i===0&&guildRow?'是':'';row[4]=i===0&&guildRow?guildRow[4]:'';row[5]=i===0&&guildRow?guildRow[5]:'';});}
+      refundGroupSizes=new Map([...groups].map(([id,items])=>[id,items.length]));refundOutput=[...groups.values()].flat();
+      $('refundBody').innerHTML=refundTableHtml(true).replace(/^<table><tbody>|<\/tbody><\/table>$/g,'');$('refundHint').textContent=`已从 ${filename} 整理 ${refundOutput.length} 条退款记录，并合并 ${groups.size} 个 ID；复制后从目标表第一条数据行的 A 列粘贴。`;$('refundResult').classList.add('show');$('refundStatus').textContent='退款数据已自动整理；公会信息仅保留在每个 ID 的首行，两个时间字段格式已统一。';$('refundStatus').className='status';
+    }
+    async function readRefundFile(file){try{$('refundStatus').textContent='正在本地读取退款表...';$('refundStatus').className='status';$('refundResult').classList.remove('show');prepareRefund(await xlsxRows(await file.arrayBuffer()),file.name);}catch(e){refundOutput=[];$('refundResult').classList.remove('show');$('refundStatus').textContent=e.message||'无法读取退款表。';$('refundStatus').className='status error';}}
+    let guildSummary=[],guildTotals=new Map(),guildLoadedFiles=new Set(),guildFilesRead=0,guildTotalRecords=0;
+    function validDateKey(year,month,day){const y=Number(year),m=Number(month),d=Number(day),date=new Date(Date.UTC(y,m-1,d));return date.getUTCFullYear()===y&&date.getUTCMonth()===m-1&&date.getUTCDate()===d?`${String(y).padStart(4,'0')}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`:'';}
+    function guildDate(value){const text=String(value??'').trim();if(!text)return '';if(/^\d+(?:\.\d+)?$/.test(text)){const date=new Date((Number(text)-25569)*86400000);if(!Number.isNaN(date.getTime()))return validDateKey(date.getUTCFullYear(),date.getUTCMonth()+1,date.getUTCDate());}const match=text.match(/(20\d{2})\s*(?:[-/._年])\s*(\d{1,2})\s*(?:[-/._月])\s*(\d{1,2})(?:日)?/);return match?validDateKey(match[1],match[2],match[3]):'';}
+    function guildFilenameDate(name){return guildDate(String(name).replace(/(20\d{2})(\d{2})(\d{2})/,'$1-$2-$3'));}
+    async function rowsFromFile(file){const buffer=await file.arrayBuffer();if(buffer.byteLength>=4){const signature=new DataView(buffer).getUint32(0,true);if(signature===0xE011CFD0)return xlsRows(buffer);if(signature===0x04034b50)return xlsxRows(buffer);}let text=new TextDecoder('utf-8').decode(buffer);if(text.includes('\ufffd'))try{text=new TextDecoder('gb18030').decode(buffer);}catch{}return csvRows(text);}
+    function guildDateColumn(rows){const names=['日期','时间','统计日期','录入日期','录入时间','创建日期','创建时间','公会创建日期','公会创建时间','新增日期','新增时间','成立日期','成立时间','申请日期','申请时间','注册日期','注册时间','加入日期','加入时间','date','createdate','createtime','createdat'].map(normalize);for(let r=0;r<Math.min(rows.length,20);r++){const heads=rows[r].map(normalize),column=heads.findIndex(x=>names.includes(x));if(column>=0)return {header:r,column};}return {header:rows.findIndex(row=>row.some(v=>String(v??'').trim())),column:-1};}
+    function renderGuildSummary(problems=[],duplicates=0){$('guildFileCount').textContent=money.format(guildFilesRead);$('guildDayCount').textContent=money.format(guildSummary.length);$('guildTotalCount').textContent=money.format(guildTotalRecords);$('guildBody').innerHTML=guildSummary.map(x=>`<tr><td>${x.date}</td><td class="number">${money.format(x.count)}</td></tr>`).join('');$('guildHint').textContent=`已累计 ${guildFilesRead} 份文件、${guildTotalRecords} 条公会记录，按日期从早到晚排列。`;$('guildResult').classList.toggle('show',!!guildSummary.length);const notes=[];if(duplicates)notes.push(`已跳过 ${duplicates} 份重复文件`);if(problems.length)notes.push(...problems);$('guildStatus').textContent=notes.length?`累计完成；${notes.join('；')}`:'累计完成。可继续添加文件。';$('guildStatus').className='status'+(problems.length?' error':'');}
+    async function readGuildFiles(fileList){const files=[...fileList];if(!files.length)return;$('guildStatus').textContent=`正在本地读取 ${files.length} 份报表并累计...`;$('guildStatus').className='status';const problems=[];let duplicates=0;for(const file of files){const fileKey=`${file.name}|${file.size}|${file.lastModified||0}`;if(guildLoadedFiles.has(fileKey)){duplicates++;continue;}try{const rows=await rowsFromFile(file);if(!rows.length)throw Error('没有数据');const {header,column}=guildDateColumn(rows),fileDate=guildFilenameDate(file.name);if(header<0)throw Error('没有有效记录');const fileTotals=new Map();let counted=0,missing=0;for(const row of rows.slice(header+1)){const values=row.map(v=>String(v??'').trim()),first=values.find(Boolean)||'';if(!first||/^(合计|总计)$/i.test(first))continue;const date=(column>=0?guildDate(row[column]):'')||fileDate;if(!date){missing++;continue;}fileTotals.set(date,(fileTotals.get(date)||0)+1);counted++;}if(!counted)throw Error(column>=0?'未识别到有效日期':'表内没有日期列，文件名中也没有完整日期');for(const [date,count] of fileTotals)guildTotals.set(date,(guildTotals.get(date)||0)+count);guildTotalRecords+=counted;guildFilesRead++;guildLoadedFiles.add(fileKey);if(missing)problems.push(`${file.name} 有 ${missing} 条记录缺少日期`);}catch(e){problems.push(`${file.name}：${e.message||'读取失败'}`);}}guildSummary=[...guildTotals].map(([date,count])=>({date,count})).sort((a,b)=>a.date.localeCompare(b.date));if(!guildSummary.length){$('guildStatus').textContent=problems.join('；')||'没有可统计的公会记录。';$('guildStatus').className='status error';return;}renderGuildSummary(problems,duplicates);}
+    function clearGuildSummary(){guildSummary=[];guildTotals=new Map();guildLoadedFiles=new Set();guildFilesRead=0;guildTotalRecords=0;$('guildFileInput').value='';$('guildBody').innerHTML='';$('guildResult').classList.remove('show');$('guildStatus').textContent='统计已清空，可以重新添加文件。';$('guildStatus').className='status';}
+    function summarize(rows, filename) {
+      if(rows.length<2)throw Error('报表没有可用数据。'); const heads=rows[0].map(normalize); const find=names=>heads.findIndex(h=>names.map(normalize).includes(h)); const game=find(required.game), input=find(required.input), output=find(required.output); if([game,input,output].some(i=>i<0))throw Error('未找到“游戏名称、投入、产出”列。请确认导出的是游戏统计报表。');
+      const groups=new Map(); let records=0,totalInput=0,totalOutput=0; for(const row of rows.slice(1)){const name=String(row[game]??'').trim();if(!name)continue;const i=number(row[input]),o=number(row[output]);const item=groups.get(name)||{name,input:0,output:0,count:0};item.input+=i;item.output+=o;item.count++;groups.set(name,item);records++;totalInput+=i;totalOutput+=o;}
+      const list=[...groups.values()].map(v=>({...v,ratio:v.input? v.output/v.input*100 : (v.output?Infinity:0)})).sort((a,b)=>b.ratio-a.ratio); render(list,totalInput,totalOutput,records,filename);
+    }
+    function render(list,totalInput,totalOutput,records,filename) {
+      $('gameCount').textContent=money.format(list.length);$('totalInput').textContent=money.format(totalInput);$('totalOutput').textContent=money.format(totalOutput);$('totalRows').textContent=money.format(records);$('tableHint').textContent=`已从 ${filename} 汇总 ${records} 条记录`;
+      latestSummary=list;body.innerHTML=list.map(x=>`<tr class="${x.ratio>100?'over':''}"><td>${escape(x.name)}</td><td class="number">${money.format(x.input)}</td><td class="number">${money.format(x.output)}</td><td class="number">${money.format(x.count)}</td><td class="number ratio">${Number.isFinite(x.ratio)?x.ratio.toFixed(2)+'%':'--'}</td></tr>`).join(''); analysis.classList.add('show');updateTencent();$('copyButton').onclick=async()=>{const out=['游戏名称\t总投入\t总产出\t总条数\t产投比',...list.map(x=>[x.name,x.input,x.output,x.count,Number.isFinite(x.ratio)?x.ratio.toFixed(2)+'%':'--'].join('\t'))].join('\n');try{await copyText(out);setStatus('排序分析结果已复制；它按产投比排序，不用于腾讯文档模板填表。');}catch{setStatus('复制失败，请检查浏览器是否允许复制。',true);}};
+    }
+    async function readFile(file) { try { setStatus('正在本地读取报表...'); const buf=await file.arrayBuffer(); const first=new DataView(buf).getUint32(0,true); let rows;if(first===0xE011CFD0)rows=xlsRows(buf);else rows=csvRows(new TextDecoder('utf-8',{fatal:false}).decode(buf));summarize(rows,file.name);setStatus('报表已在本地汇总，未上传到任何服务器。'); }catch(e){analysis.classList.remove('show');setStatus(e.message||'无法读取该报表。',true);} }
+    $('fileInput').addEventListener('change',e=>e.target.files[0]&&readFile(e.target.files[0])); const zone=$('dropZone');['dragenter','dragover'].forEach(t=>zone.addEventListener(t,e=>{e.preventDefault();zone.classList.add('drag');}));['dragleave','drop'].forEach(t=>zone.addEventListener(t,e=>{e.preventDefault();zone.classList.remove('drag');}));zone.addEventListener('drop',e=>e.dataTransfer.files[0]&&readFile(e.dataTransfer.files[0]));
+    $('refundFileInput').addEventListener('change',e=>e.target.files[0]&&readRefundFile(e.target.files[0]));const refundZone=$('refundDropZone');['dragenter','dragover'].forEach(t=>refundZone.addEventListener(t,e=>{e.preventDefault();refundZone.classList.add('drag');}));['dragleave','drop'].forEach(t=>refundZone.addEventListener(t,e=>{e.preventDefault();refundZone.classList.remove('drag');}));refundZone.addEventListener('drop',e=>e.dataTransfer.files[0]&&readRefundFile(e.dataTransfer.files[0]));
+    $('refundBody').onchange=e=>{const select=e.target.closest('[data-refund-status]');if(!select)return;refundOutput[Number(select.dataset.refundStatus)][3]=select.value;};
+    $('copyRefundButton').onclick=async()=>{const text=refundPlainText(),html=refundTableHtml();try{if(navigator.clipboard?.write&&window.ClipboardItem&&window.isSecureContext){await navigator.clipboard.write([new ClipboardItem({'text/plain':new Blob([text],{type:'text/plain'}),'text/html':new Blob([html],{type:'text/html'})})]);}else await copyText(text);$('refundStatus').textContent=`已复制 ${refundOutput.length} 条退款记录，相同 ID 使用合并单元格格式。请从目标表第一条数据行的 A 列粘贴。`;$('refundStatus').className='status';}catch{try{await copyText(text);$('refundStatus').textContent=`已复制 ${refundOutput.length} 条退款记录；重复 ID 已留空，请从目标表第一条数据行的 A 列粘贴。`;$('refundStatus').className='status';}catch{$('refundStatus').textContent='复制失败，请检查浏览器是否允许复制。';$('refundStatus').className='status error';}}};
+    $('guildFileInput').addEventListener('change',async e=>{await readGuildFiles(e.target.files);e.target.value='';});const guildZone=$('guildDropZone');['dragenter','dragover'].forEach(t=>guildZone.addEventListener(t,e=>{e.preventDefault();guildZone.classList.add('drag');}));['dragleave','drop'].forEach(t=>guildZone.addEventListener(t,e=>{e.preventDefault();guildZone.classList.remove('drag');}));guildZone.addEventListener('drop',e=>{if(e.dataTransfer.files.length)readGuildFiles(e.dataTransfer.files);});
+    $('clearGuildButton').onclick=clearGuildSummary;
+    $('copyGuildButton').onclick=async()=>{const text=['日期\t公会数量',...guildSummary.map(x=>`${x.date}\t${x.count}`)].join('\n');try{await copyText(text);$('guildStatus').textContent=`已复制 ${guildSummary.length} 天的公会统计结果。`;$('guildStatus').className='status';}catch{$('guildStatus').textContent='复制失败，请检查浏览器是否允许复制。';$('guildStatus').className='status error';}};
+    async function copyBlock(index) {const block=currentBlocks[index];if(!block)return;try{await copyText(block.text);setStatus(`已复制 ${block.name} 的 3 格数据，请粘贴到腾讯文档 ${block.target}。产投公式行不受影响。`);copyStep=(index+1)%currentBlocks.length;updateCopyButton();}catch{setStatus('复制失败，请检查浏览器是否允许复制。',true);}}
+    $('copyTencentButton').onclick=()=>copyBlock(copyStep);
+    $('fillPlan').onclick=e=>{const button=e.target.closest('[data-copy-block]');if(button)copyBlock(+button.dataset.copyBlock);};
+    const key='personal-workbench-todos-v1'; let todos=[],editIndex=-1; try{todos=JSON.parse(localStorage.getItem(key)||'[]');if(!Array.isArray(todos))todos=[];}catch{} const save=()=>localStorage.setItem(key,JSON.stringify(todos));
+    function renderTodos(){const list=$('todoList');list.innerHTML=todos.map((t,i)=>i===editIndex?`<li class="todo"><input type="checkbox" data-index="${i}" ${t.done?'checked':''} aria-label="完成 ${escape(t.text)}"><input class="todo-input todo-edit" data-edit-input="${i}" maxlength="200" value="${escape(t.text)}" aria-label="编辑待办事项"><button class="icon" type="button" data-save="${i}" title="保存" aria-label="保存修改">✓</button><button class="icon" type="button" data-cancel title="取消" aria-label="取消编辑">×</button></li>`:`<li class="todo ${t.done?'done':''}"><input type="checkbox" data-index="${i}" ${t.done?'checked':''} aria-label="完成 ${escape(t.text)}"><span>${escape(t.text)}</span><button class="icon" type="button" data-edit="${i}" title="编辑" aria-label="编辑 ${escape(t.text)}">✎</button><button class="icon delete" type="button" data-delete="${i}" title="删除" aria-label="删除 ${escape(t.text)}">×</button></li>`).join('');$('todoEmpty').hidden=!!todos.length;list.querySelectorAll('[data-index]').forEach(x=>x.onchange=()=>{todos[+x.dataset.index].done=x.checked;save();renderTodos();});list.querySelectorAll('[data-edit]').forEach(x=>x.onclick=()=>{editIndex=+x.dataset.edit;renderTodos();const input=list.querySelector('[data-edit-input]');input.focus();input.select();});list.querySelectorAll('[data-save]').forEach(x=>x.onclick=()=>{const i=+x.dataset.save,text=list.querySelector('[data-edit-input]').value.trim();if(!text)return;todos[i].text=text;editIndex=-1;save();renderTodos();});list.querySelectorAll('[data-cancel]').forEach(x=>x.onclick=()=>{editIndex=-1;renderTodos();});list.querySelectorAll('[data-delete]').forEach(x=>x.onclick=()=>{todos.splice(+x.dataset.delete,1);editIndex=-1;save();renderTodos();});list.querySelectorAll('[data-edit-input]').forEach(x=>x.onkeydown=e=>{if(e.key==='Enter')list.querySelector('[data-save]').click();if(e.key==='Escape')list.querySelector('[data-cancel]').click();});}
+    $('todoForm').onsubmit=e=>{e.preventDefault();const input=$('todoInput'),text=input.value.trim();if(!text)return;todos.unshift({text,done:false});save();input.value='';renderTodos();};renderTodos();
+  })();
+  </script>
+</body>
+</html>
