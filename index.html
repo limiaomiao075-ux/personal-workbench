@@ -184,7 +184,7 @@
     const tencentGames = ['PyramidSlot','FishingStar','BountyRacing','LUDO','CrashPro','CamelRacing','DragonTiger2','Lord Of Olympus','Mole Star','Yummy','Fruit77','Greedy Cat','MahjongSlot','LuckyGem','ChickenRun'];
     const templateGameLabels = ['PyramidSlot','fishing','BountyRacing','ludo','crash pro','CamelRacing','DragonTiger2','Lord Of Olympus','Mole Star','Yummy','Fruit77','Greedy Cat','MahjongSlot','LuckyGem','ChickenRun'];
     let latestSummary=[], copyStep=0, currentBlocks=[];
-    const templateDates = Array.from({length:7},(_,i)=>{const d=new Date(Date.UTC(2026,8,28+7+i));return {date:d.toISOString().slice(0,10),column:String.fromCharCode(74+i)};});
+    const templateDates = Array.from({length:7},(_,i)=>{const d=new Date(Date.UTC(2026,11,12+i));return {date:d.toISOString().slice(0,10),column:String.fromCharCode(74+i)};});
     $('reportDate').innerHTML+=templateDates.map(x=>`<option value="${x.date}">${x.date}（${x.column}列）</option>`).join('');
     $('templateOrder').textContent='模板游戏顺序：'+templateGameLabels.join(' → ');
     const required = { game:['游戏名称','游戏名','game name'], input:['投入','总投入','input'], output:['产出','总产出','output'] };
