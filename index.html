@@ -86,6 +86,14 @@
     .todo.done span { color:var(--muted); text-decoration:line-through; }
     .todo input[type=checkbox] { width:18px; height:18px; accent-color:var(--accent); }
     .todo span { overflow-wrap:anywhere; }
+    .tool-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+    .field-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-items:end; }
+    .field label { display:block; margin-bottom:5px; color:var(--muted); font-size:13px; }
+    .field input[type=number], .field input[type=text], .field select { width:100%; min-height:40px; padding:7px 10px; border:1px solid #aebdb8; border-radius:5px; background:#fff; }
+    .check { display:flex; gap:7px; align-items:center; min-height:40px; color:var(--muted); font-size:14px; }
+    .tool-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
+    .preview-list { display:grid; gap:6px; margin:14px 0 0; padding:0; list-style:none; color:var(--muted); font-size:13px; }
+    .preview-list li { padding:7px 9px; border:1px solid var(--line); border-radius:5px; overflow-wrap:anywhere; }
     .icon { width:34px; height:34px; border:0; border-radius:5px; background:transparent; color:#657370; font-size:20px; }
     .icon:hover { color:var(--accent); background:#e7f3ef; }
     .icon.delete:hover { color:var(--alert); background:#fff0eb; }
@@ -165,8 +173,26 @@
         </div>
       </section>
 
+      <section aria-labelledby="resize-title">
+        <div class="section-head"><div><h2 id="resize-title">5. 图片尺寸改变</h2><p>本地批量调整图片尺寸，处理结果只在当前浏览器生成。</p></div></div>
+        <div class="panel">
+          <div class="upload" id="imageDropZone"><div><p>拖入一张或多张图片，或从设备中选择</p><label class="file-label" for="imageFileInput">选择图片</label><input id="imageFileInput" type="file" multiple accept="image/*"></div></div>
+          <div class="field-grid" style="margin-top:16px"><div class="field"><label for="imageWidth">目标宽度（像素）</label><input id="imageWidth" type="number" min="1" max="10000" placeholder="例如 1080"></div><div class="field"><label for="imageHeight">目标高度（像素）</label><input id="imageHeight" type="number" min="1" max="10000" placeholder="例如 1080"></div><label class="check"><input id="keepRatio" type="checkbox" checked>锁定比例</label></div>
+          <div class="tool-actions"><button class="button" id="resizeButton" type="button" disabled>批量处理并下载</button><button class="button secondary" id="clearImagesButton" type="button">清空图片</button></div><p class="status" id="imageStatus" aria-live="polite"></p><ul class="preview-list" id="imageList"></ul>
+        </div>
+      </section>
+
+      <section aria-labelledby="rename-title">
+        <div class="section-head"><div><h2 id="rename-title">6. 批量改名字</h2><p>选择多个文件，按编号生成新文件名并下载副本，原文件不变。</p></div></div>
+        <div class="panel">
+          <div class="upload" id="renameDropZone"><div><p>拖入需要改名的文件，或从设备中选择</p><label class="file-label" for="renameFileInput">选择文件</label><input id="renameFileInput" type="file" multiple></div></div>
+          <div class="field-grid" style="margin-top:16px"><div class="field"><label for="renamePrefix">文件名前缀</label><input id="renamePrefix" type="text" placeholder="例如 商品图"></div><div class="field"><label for="renameStart">起始编号</label><input id="renameStart" type="number" min="0" step="1" value="1"></div><div class="field"><label for="renameDigits">编号位数</label><input id="renameDigits" type="number" min="1" max="8" step="1" value="3"></div></div>
+          <div class="tool-actions"><button class="button" id="renameButton" type="button" disabled>生成并下载改名文件</button><button class="button secondary" id="clearRenameButton" type="button">清空文件</button></div><p class="status" id="renameStatus" aria-live="polite"></p><ul class="preview-list" id="renameList"></ul>
+        </div>
+      </section>
+
       <section aria-labelledby="todo-title">
-        <div class="section-head"><div><h2 id="todo-title">5. 待办清单</h2><p>待办和勾选状态只保存在当前浏览器中。</p></div></div>
+        <div class="section-head"><div><h2 id="todo-title">7. 待办清单</h2><p>待办和勾选状态只保存在当前浏览器中。</p></div></div>
         <div class="panel">
           <form class="todo-bar" id="todoForm"><input class="todo-input" id="todoInput" maxlength="200" autocomplete="off" placeholder="输入待办事项"><button class="button" type="submit">新增待办</button></form>
           <ul class="todo-list" id="todoList"></ul><p class="empty" id="todoEmpty">还没有待办事项。</p>
@@ -227,10 +253,26 @@
     }
     function latin1(bytes, start, length) { let s=''; for(let i=start;i<start+length;i++)s+=String.fromCharCode(bytes[i]); return s; }
     function utf16(bytes, start, length) { let s=''; for(let i=start;i<start+length;i+=2)s+=String.fromCharCode(bytes[i]|(bytes[i+1]<<8)); return s; }
-    function readSst(bytes, off, end) {
-      let pos=off, count=bytes[pos]|(bytes[pos+1]<<8); pos+=2; const flags=bytes[pos++]; const wide=flags&1, rich=flags&8, ext=flags&4;
-      let runs=0, extLen=0; if(rich){runs=bytes[pos]|(bytes[pos+1]<<8);pos+=2;} if(ext){extLen=(bytes[pos]|(bytes[pos+1]<<8)|(bytes[pos+2]<<16)|(bytes[pos+3]<<24))>>>0;pos+=4;}
-      const size=count*(wide?2:1); if(pos+size>end) throw Error('报表中字符串跨区段，无法读取。'); const text=wide?utf16(bytes,pos,size):latin1(bytes,pos,size); return { text, next:pos+size+runs*4+extLen };
+    function readSst(chunks) {
+      let chunk=0, pos=0;
+      const advance=()=>{while(chunk<chunks.length&&pos===chunks[chunk].length){chunk++;pos=0;}if(chunk>=chunks.length)throw Error('报表字符串数据不完整。');};
+      const byte=()=>{advance();return chunks[chunk][pos++];};
+      const uint16=()=>byte()|(byte()<<8);
+      const uint32=()=>(byte()|(byte()<<8)|(byte()<<16)|(byte()<<24))>>>0;
+      uint32(); const unique=uint32(), strings=[];
+      for(let i=0;i<unique;i++){
+        const count=uint16(), flags=byte(), runs=flags&8?uint16():0, extLen=flags&4?uint32():0;
+        let wide=flags&1, value='';
+        for(let j=0;j<count;j++){
+          // Only a continuation within character data starts with an encoding flag.
+          if(pos===chunks[chunk].length){advance();wide=byte()&1;}
+          if(wide&&chunks[chunk].length-pos<2)throw Error('报表字符串字符不完整。');
+          value+=String.fromCharCode(wide?uint16():byte());
+        }
+        for(let j=0;j<runs*4+extLen;j++)byte();
+        strings.push(value);
+      }
+      return strings;
     }
     function xlsRows(buffer) {
       const b=new Uint8Array(buffer), dv=new DataView(buffer); if(dv.getUint32(0,true)!==0xE011CFD0) throw Error('文件格式不正确。');
@@ -244,9 +286,9 @@
       const bookData=book.size<miniCut&&rootData ? (()=>{let out=[],seen=new Set(),q=book.start;while(q>=0&&q!==-2&&!seen.has(q)){seen.add(q);out.push(...rootData.slice(q*miniSector,q*miniSector+miniSector));q=miniFat[q];}return new Uint8Array(out.slice(0,book.size));})() : readChain(book.start,fat,book.size);
       let p=0, sst=[]; const sheets=[]; while(p+4<=bookData.length){const type=bookData[p]|(bookData[p+1]<<8), len=bookData[p+2]|(bookData[p+3]<<8), data=p+4, end=data+len; if(end>bookData.length)break;
         if(type===0x0085){ const pos=bookData[data]|(bookData[data+1]<<8)|(bookData[data+2]<<16)|(bookData[data+3]<<24), count=bookData[data+6], flag=bookData[data+7], name=flag?utf16(bookData,data+8,count*2):latin1(bookData,data+8,count); sheets.push({pos,name}); }
-        if(type===0x00fc){ let q=data+8, left=(bookData[data+4]|(bookData[data+5]<<8)|(bookData[data+6]<<16)|(bookData[data+7]<<24))>>>0; while(left&&q<bookData.length){try{const value=readSst(bookData,q,bookData.length);sst.push(value.text);q=value.next;left--;}catch{break;}} } p=end; }
+        if(type===0x00fc){const chunks=[bookData.subarray(data,end)];let next=end;while(next+4<=bookData.length&&(bookData[next]|(bookData[next+1]<<8))===0x003c){const size=bookData[next+2]|(bookData[next+3]<<8), stop=next+4+size;if(stop>bookData.length)throw Error('报表字符串区段不完整。');chunks.push(bookData.subarray(next+4,stop));next=stop;}sst=readSst(chunks);p=next;}else p=end; }
       if(!sheets.length)throw Error('报表中没有工作表。'); const sheet=sheets[0], cells=[]; p=sheet.pos; while(p+4<=bookData.length){const type=bookData[p]|(bookData[p+1]<<8), len=bookData[p+2]|(bookData[p+3]<<8), d=p+4, end=d+len;if(end>bookData.length)break;if(type===0x000a)break;
-        const cell=(r,c,v)=>{if(!cells[r])cells[r]=[];cells[r][c]=v;}; if(type===0x00fd){const r=bookData[d]|(bookData[d+1]<<8),c=bookData[d+2]|(bookData[d+3]<<8),idx=bookData[d+6]|(bookData[d+7]<<8)|(bookData[d+8]<<16)|(bookData[d+9]<<24);cell(r,c,sst[idx]??'');}
+        const cell=(r,c,v)=>{if(!cells[r])cells[r]=[];cells[r][c]=v;}; if(type===0x00fd){const r=bookData[d]|(bookData[d+1]<<8),c=bookData[d+2]|(bookData[d+3]<<8),idx=(bookData[d+6]|(bookData[d+7]<<8)|(bookData[d+8]<<16)|(bookData[d+9]<<24))>>>0;if(idx>=sst.length)throw Error('报表字符串索引不完整，请重新导出报表。');cell(r,c,sst[idx]);}
         else if(type===0x0203){const r=bookData[d]|(bookData[d+1]<<8),c=bookData[d+2]|(bookData[d+3]<<8);cell(r,c,new DataView(bookData.buffer,bookData.byteOffset+d+6,8).getFloat64(0,true));}
         else if(type===0x027e){const r=bookData[d]|(bookData[d+1]<<8),c=bookData[d+2]|(bookData[d+3]<<8),rk=bookData[d+6]|(bookData[d+7]<<8)|(bookData[d+8]<<16)|(bookData[d+9]<<24);let v=rk&2?(rk>>2):new DataView(new Uint8Array([0,0,0,0,bookData[d+9],bookData[d+8],bookData[d+7],bookData[d+6]]).buffer).getFloat64(0,false);cell(r,c,(rk&1)?v/100:v);}
         p=end; }
@@ -315,6 +357,17 @@
     const key='personal-workbench-todos-v1'; let todos=[],editIndex=-1; try{todos=JSON.parse(localStorage.getItem(key)||'[]');if(!Array.isArray(todos))todos=[];}catch{} const save=()=>localStorage.setItem(key,JSON.stringify(todos));
     function renderTodos(){const list=$('todoList');list.innerHTML=todos.map((t,i)=>i===editIndex?`<li class="todo"><input type="checkbox" data-index="${i}" ${t.done?'checked':''} aria-label="完成 ${escape(t.text)}"><input class="todo-input todo-edit" data-edit-input="${i}" maxlength="200" value="${escape(t.text)}" aria-label="编辑待办事项"><button class="icon" type="button" data-save="${i}" title="保存" aria-label="保存修改">✓</button><button class="icon" type="button" data-cancel title="取消" aria-label="取消编辑">×</button></li>`:`<li class="todo ${t.done?'done':''}"><input type="checkbox" data-index="${i}" ${t.done?'checked':''} aria-label="完成 ${escape(t.text)}"><span>${escape(t.text)}</span><button class="icon" type="button" data-edit="${i}" title="编辑" aria-label="编辑 ${escape(t.text)}">✎</button><button class="icon delete" type="button" data-delete="${i}" title="删除" aria-label="删除 ${escape(t.text)}">×</button></li>`).join('');$('todoEmpty').hidden=!!todos.length;list.querySelectorAll('[data-index]').forEach(x=>x.onchange=()=>{todos[+x.dataset.index].done=x.checked;save();renderTodos();});list.querySelectorAll('[data-edit]').forEach(x=>x.onclick=()=>{editIndex=+x.dataset.edit;renderTodos();const input=list.querySelector('[data-edit-input]');input.focus();input.select();});list.querySelectorAll('[data-save]').forEach(x=>x.onclick=()=>{const i=+x.dataset.save,text=list.querySelector('[data-edit-input]').value.trim();if(!text)return;todos[i].text=text;editIndex=-1;save();renderTodos();});list.querySelectorAll('[data-cancel]').forEach(x=>x.onclick=()=>{editIndex=-1;renderTodos();});list.querySelectorAll('[data-delete]').forEach(x=>x.onclick=()=>{todos.splice(+x.dataset.delete,1);editIndex=-1;save();renderTodos();});list.querySelectorAll('[data-edit-input]').forEach(x=>x.onkeydown=e=>{if(e.key==='Enter')list.querySelector('[data-save]').click();if(e.key==='Escape')list.querySelector('[data-cancel]').click();});}
     $('todoForm').onsubmit=e=>{e.preventDefault();const input=$('todoInput'),text=input.value.trim();if(!text)return;todos.unshift({text,done:false});save();input.value='';renderTodos();};renderTodos();
+    let imageFiles=[],renameFiles=[];
+    const bindDrop=(zone,handler)=>{['dragenter','dragover'].forEach(t=>$(zone).addEventListener(t,e=>{e.preventDefault();$(zone).classList.add('drag');}));['dragleave','drop'].forEach(t=>$(zone).addEventListener(t,e=>{e.preventDefault();$(zone).classList.remove('drag');}));$(zone).addEventListener('drop',e=>handler([...e.dataTransfer.files]));};
+    const imageName=(name,index)=>{const dot=name.lastIndexOf('.');return `${name.slice(0,dot<0?name.length:dot)}-${index+1}${dot<0?'':name.slice(dot)}`;};
+    function renderImageList(){ $('imageList').innerHTML=imageFiles.map((f,i)=>`<li>${i+1}. ${escape(f.name)}${f.type?`（${escape(f.type)}）`:''}</li>`).join('');$('resizeButton').disabled=!imageFiles.length; }
+    function renderRenameList(){const prefix=$('renamePrefix').value.trim()||'文件';const start=Math.max(0,Number($('renameStart').value)||0),digits=Math.min(8,Math.max(1,Number($('renameDigits').value)||3));$('renameList').innerHTML=renameFiles.map((f,i)=>{const dot=f.name.lastIndexOf('.'),ext=dot<0?'':f.name.slice(dot);return `<li>${escape(f.name)} → ${escape(prefix+String(start+i).padStart(digits,'0')+ext)}</li>`;}).join('');$('renameButton').disabled=!renameFiles.length;}
+    const setImageFiles=files=>{imageFiles=files.filter(f=>f.type.startsWith('image/'));renderImageList();$('imageStatus').textContent=files.length&&!imageFiles.length?'未找到可处理的图片。':imageFiles.length?`已选择 ${imageFiles.length} 张图片。`:'';};
+    const setRenameFiles=files=>{renameFiles=files;renderRenameList();$('renameStatus').textContent=files.length?`已选择 ${files.length} 个文件。`:'';};
+    $('imageFileInput').onchange=e=>setImageFiles([...e.target.files]);bindDrop('imageDropZone',setImageFiles);$('clearImagesButton').onclick=()=>{imageFiles=[];$('imageFileInput').value='';renderImageList();$('imageStatus').textContent='已清空图片。';};
+    $('renameFileInput').onchange=e=>setRenameFiles([...e.target.files]);bindDrop('renameDropZone',setRenameFiles);['renamePrefix','renameStart','renameDigits'].forEach(id=>$(id).addEventListener('input',renderRenameList));$('clearRenameButton').onclick=()=>{renameFiles=[];$('renameFileInput').value='';renderRenameList();$('renameStatus').textContent='已清空文件。';};
+    $('resizeButton').onclick=async()=>{const width=Math.floor(Number($('imageWidth').value)),height=Math.floor(Number($('imageHeight').value));if(!width||!height){$('imageStatus').textContent='请填写有效的宽度和高度。';$('imageStatus').className='status error';return;}$('imageStatus').className='status';let done=0;for(const [i,file] of imageFiles.entries()){try{const img=await createImageBitmap(file);let w=width,h=height;if($('keepRatio').checked){const ratio=Math.min(width/img.width,height/img.height);w=Math.max(1,Math.round(img.width*ratio));h=Math.max(1,Math.round(img.height*ratio));}const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(img,0,0,w,h);const blob=await new Promise(resolve=>canvas.toBlob(resolve,file.type||'image/png'));if(!blob)throw Error('无法生成图片');const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=imageName(file.name,i);a.click();URL.revokeObjectURL(url);done++;img.close();}catch{} }$('imageStatus').textContent=`已生成并下载 ${done}/${imageFiles.length} 张图片。`;};
+    $('renameButton').onclick=()=>{const prefix=$('renamePrefix').value.trim()||'文件',start=Math.max(0,Number($('renameStart').value)||0),digits=Math.min(8,Math.max(1,Number($('renameDigits').value)||3));renameFiles.forEach((file,i)=>{const dot=file.name.lastIndexOf('.'),ext=dot<0?'':file.name.slice(dot),url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download=prefix+String(start+i).padStart(digits,'0')+ext;a.click();URL.revokeObjectURL(url);});$('renameStatus').textContent=`已生成 ${renameFiles.length} 个改名文件下载。`;};
   })();
   </script>
 </body>
