@@ -117,9 +117,9 @@
         <div class="section-head"><div><h2 id="form-title">1. 平时填表工作处理</h2><p>导入后台导出的游戏统计报表，生成可复制的汇总数据。</p></div></div>
         <div class="panel">
           <div class="upload" id="dropZone">
-            <div><p>拖入报表，或从设备中选择文件</p><label class="file-label" for="fileInput">选择报表</label><input id="fileInput" type="file" accept=".csv,.xls,text/csv,application/vnd.ms-excel"></div>
+            <div><p>拖入报表，或从设备中选择文件</p><label class="file-label" for="fileInput">选择报表</label><input id="fileInput" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
           </div>
-          <p class="file-note">支持普通 CSV，以及后台导出但后缀为 CSV 的旧版 Excel 报表。</p>
+          <p class="file-note">支持 CSV、XLS、XLSX，以及扩展名与实际格式不一致的后台导出报表。</p>
           <p class="status" id="status" aria-live="polite"></p>
         </div>
       </section>
@@ -131,11 +131,11 @@
             <div class="stat"><b>游戏数</b><strong id="gameCount">0</strong></div>
             <div class="stat"><b>总投入</b><strong id="totalInput">0</strong></div>
             <div class="stat"><b>总产出</b><strong id="totalOutput">0</strong></div>
-            <div class="stat"><b>总条数</b><strong id="totalRows">0</strong></div>
+            <div class="stat"><b>总人数</b><strong id="totalRows">0</strong></div>
           </div>
           <div class="toolbar"><small id="tableHint"></small><button class="button secondary" id="copyButton" type="button" title="复制当前按产投比排序的分析表">复制排序分析结果</button></div>
-          <div class="table-wrap"><table><thead><tr><th>游戏名称</th><th class="number">总投入</th><th class="number">总产出</th><th class="number">总条数</th><th class="number">产投比</th></tr></thead><tbody id="summaryBody"></tbody></table></div>
-          <div class="fill-guide"><div><h3>腾讯文档填表</h3><p>每个游戏只复制“人数／人次、投入、产出”3 格，产投行保留腾讯文档里的公式。人数按报表条数统计；日期只用于定位，请确认后台报表的查询日期一致。</p><div class="fill-controls"><label for="reportDate">填表日期</label><select id="reportDate"><option value="">请选择模板中的日期</option></select><button class="button" id="copyTencentButton" type="button" disabled>复制第 1 个游戏（3 格）</button></div><p id="pasteTarget" aria-live="polite"></p><p id="mappingStatus" aria-live="polite"></p><p id="templateOrder"></p><details><summary>查看 15 个粘贴范围</summary><ol class="fill-plan" id="fillPlan"></ol><p>每次只粘贴连续 3 格，下一行的产投公式不会被覆盖。</p></details></div></div>
+          <div class="table-wrap"><table><thead><tr><th>游戏名称</th><th class="number">总投入</th><th class="number">总产出</th><th class="number">总人数</th><th class="number">产投比</th></tr></thead><tbody id="summaryBody"></tbody></table></div>
+          <div class="fill-guide"><div><h3>腾讯文档填表</h3><p>按导入报表中的游戏顺序，每个游戏复制“总人数、总投入、总产出”3 格，产投行保留腾讯文档里的公式。</p><div class="fill-controls"><label for="reportDate">填表日期</label><select id="reportDate"><option value="">请选择模板中的日期</option></select><button class="button" id="copyTencentButton" type="button" disabled>复制第 1 个游戏（3 格）</button></div><p id="pasteTarget" aria-live="polite"></p><p id="mappingStatus" aria-live="polite"></p><p id="templateOrder"></p><details><summary id="fillPlanSummary">查看复制范围</summary><ol class="fill-plan" id="fillPlan"></ol><p>每次只粘贴连续 3 格，下一行的产投公式不会被覆盖。</p></details></div></div>
         </div>
       </section>
 
@@ -209,23 +209,17 @@
     const $ = id => document.getElementById(id);
     const money = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 0 });
     const status = $('status'), analysis = $('analysis'), body = $('summaryBody');
-    const tencentGames = ['PyramidSlot','FishingStar','BountyRacing','LUDO','CrashPro','CamelRacing','DragonTiger2','Lord Of Olympus','Mole Star','Yummy','Fruit77','Greedy Cat','MahjongSlot','LuckyGem','ChickenRun'];
-    const templateGameLabels = ['PyramidSlot','fishing','BountyRacing','ludo','crash pro','CamelRacing','DragonTiger2','Lord Of Olympus','Mole Star','Yummy','Fruit77','Greedy Cat','MahjongSlot','LuckyGem','ChickenRun'];
-    let latestSummary=[], copyStep=0, currentBlocks=[];
+    let latestSummary=[], latestReportOrder=[], copyStep=0, currentBlocks=[];
     const templateDates = Array.from({length:7},(_,i)=>{const d=new Date(Date.UTC(2026,11,12+i));return {date:d.toISOString().slice(0,10),column:String.fromCharCode(74+i)};});
     $('reportDate').innerHTML+=templateDates.map(x=>`<option value="${x.date}">${x.date}（${x.column}列）</option>`).join('');
-    $('templateOrder').textContent='模板游戏顺序：'+templateGameLabels.join(' → ');
-    const required = { game:['游戏名称','游戏名','game name'], input:['投入','总投入','input'], output:['产出','总产出','output'] };
+    const required = { game:['游戏名称','游戏名','game name'], count:['人数','总人数','人次','总人次','count'], input:['投入','总投入','input'], output:['产出','总产出','output'] };
     const normalize = v => String(v ?? '').trim().toLowerCase().replace(/[\s_\-]/g, '');
     const number = value => { const n = Number(String(value ?? '').replace(/[,%\s]/g, '')); return Number.isFinite(n) ? n : 0; };
     const setStatus = (text, bad=false) => { status.textContent=text; status.className='status'+(bad?' error':''); };
     const escape = v => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     async function copyText(text) { if(navigator.clipboard&&window.isSecureContext){try{await navigator.clipboard.writeText(text);return;}catch{}}const area=document.createElement('textarea');area.value=text;area.setAttribute('readonly','');area.style.cssText='position:fixed;opacity:0';document.body.append(area);area.select();const ok=document.execCommand('copy');area.remove();if(!ok)throw Error('复制失败'); }
     function tencentBlocks(list, column) {
-      const lookup=new Map(list.map(x=>[normalize(x.name),x]));
-      const missing=tencentGames.filter(name=>!lookup.has(normalize(name)));
-      if(missing.length)throw Error('报表缺少游戏：'+missing.join('、')+'。请确认导出范围，暂不能整列复制。');
-      return tencentGames.map((name,index)=>{const x=lookup.get(normalize(name)),start=83+index*4;return {name:templateGameLabels[index],start,end:start+2,target:`${column}${start}:${column}${start+2}`,text:[x.count,x.input,x.output].join('\n')};});
+      return list.map((x,index)=>{const start=83+index*4;return {name:x.name,start,end:start+2,target:`${column}${start}:${column}${start+2}`,text:[x.count,x.input,x.output].join('\n')};});
     }
     function updateCopyButton() {
       const selected=templateDates.find(x=>x.date===$('reportDate').value), block=currentBlocks[copyStep];
@@ -236,7 +230,7 @@
       const selected=templateDates.find(x=>x.date===$('reportDate').value);
       copyStep=0;currentBlocks=[];
       $('pasteTarget').textContent=selected?`从 ${selected.column}83:${selected.column}85 开始，每个游戏粘贴 3 格；产投公式行保持不动。`:'请选择填表日期。模板之外的日期需要更新列位置。';
-      try{if(!selected)throw Error('选择日期后会生成 15 个三格粘贴范围。');currentBlocks=tencentBlocks(latestSummary,selected.column);$('mappingStatus').textContent='已按模板顺序匹配 15 个游戏，只填人数、投入和产出。';$('fillPlan').innerHTML=currentBlocks.map((x,i)=>`<li class="fill-item"><b>${i+1}. ${escape(x.name)}</b><small>${x.target}：人数、投入、产出</small><button class="button secondary" type="button" data-copy-block="${i}">复制 3 格</button></li>`).join('');}
+      try{if(!selected)throw Error('选择日期后会按报表顺序生成复制范围。');currentBlocks=tencentBlocks(latestReportOrder,selected.column);$('mappingStatus').textContent=`已按报表顺序生成 ${currentBlocks.length} 个游戏，只填总人数、总投入和总产出。`;$('fillPlanSummary').textContent=`查看 ${currentBlocks.length} 个复制范围`;$('fillPlan').innerHTML=currentBlocks.map((x,i)=>`<li class="fill-item"><b>${i+1}. ${escape(x.name)}</b><small>${x.target}：总人数、总投入、总产出</small><button class="button secondary" type="button" data-copy-block="${i}">复制 3 格</button></li>`).join('');}
       catch(e){$('fillPlan').innerHTML='';$('mappingStatus').textContent=e.message;}
       updateCopyButton();
     }
@@ -337,15 +331,15 @@
     async function readGuildFiles(fileList){const files=[...fileList];if(!files.length)return;$('guildStatus').textContent=`正在本地读取 ${files.length} 份报表并累计...`;$('guildStatus').className='status';const problems=[];let duplicates=0;for(const file of files){const fileKey=`${file.name}|${file.size}|${file.lastModified||0}`;if(guildLoadedFiles.has(fileKey)){duplicates++;continue;}try{const rows=await rowsFromFile(file);if(!rows.length)throw Error('没有数据');const {header,column}=guildDateColumn(rows),fileDate=guildFilenameDate(file.name);if(header<0)throw Error('没有有效记录');const fileTotals=new Map();let counted=0,missing=0;for(const row of rows.slice(header+1)){const values=row.map(v=>String(v??'').trim()),first=values.find(Boolean)||'';if(!first||/^(合计|总计)$/i.test(first))continue;const date=(column>=0?guildDate(row[column]):'')||fileDate;if(!date){missing++;continue;}fileTotals.set(date,(fileTotals.get(date)||0)+1);counted++;}if(!counted)throw Error(column>=0?'未识别到有效日期':'表内没有日期列，文件名中也没有完整日期');for(const [date,count] of fileTotals)guildTotals.set(date,(guildTotals.get(date)||0)+count);guildTotalRecords+=counted;guildFilesRead++;guildLoadedFiles.add(fileKey);if(missing)problems.push(`${file.name} 有 ${missing} 条记录缺少日期`);}catch(e){problems.push(`${file.name}：${e.message||'读取失败'}`);}}guildSummary=[...guildTotals].map(([date,count])=>({date,count})).sort((a,b)=>a.date.localeCompare(b.date));if(!guildSummary.length){$('guildStatus').textContent=problems.join('；')||'没有可统计的公会记录。';$('guildStatus').className='status error';return;}renderGuildSummary(problems,duplicates);}
     function clearGuildSummary(){guildSummary=[];guildTotals=new Map();guildLoadedFiles=new Set();guildFilesRead=0;guildTotalRecords=0;$('guildFileInput').value='';$('guildBody').innerHTML='';$('guildResult').classList.remove('show');$('guildStatus').textContent='统计已清空，可以重新添加文件。';$('guildStatus').className='status';}
     function summarize(rows, filename) {
-      if(rows.length<2)throw Error('报表没有可用数据。'); const heads=rows[0].map(normalize); const find=names=>heads.findIndex(h=>names.map(normalize).includes(h)); const game=find(required.game), input=find(required.input), output=find(required.output); if([game,input,output].some(i=>i<0))throw Error('未找到“游戏名称、投入、产出”列。请确认导出的是游戏统计报表。');
-      const groups=new Map(); let records=0,totalInput=0,totalOutput=0; for(const row of rows.slice(1)){const name=String(row[game]??'').trim();if(!name)continue;const i=number(row[input]),o=number(row[output]);const item=groups.get(name)||{name,input:0,output:0,count:0};item.input+=i;item.output+=o;item.count++;groups.set(name,item);records++;totalInput+=i;totalOutput+=o;}
-      const list=[...groups.values()].map(v=>({...v,ratio:v.input? v.output/v.input*100 : (v.output?Infinity:0)})).sort((a,b)=>b.ratio-a.ratio); render(list,totalInput,totalOutput,records,filename);
+      if(rows.length<2)throw Error('报表没有可用数据。'); const headerIndex=rows.findIndex(row=>row.some(v=>required.game.map(normalize).includes(normalize(v))));if(headerIndex<0)throw Error('未找到“游戏名称”列。请确认导出的是游戏统计报表。');const heads=rows[headerIndex].map(normalize); const find=names=>heads.findIndex(h=>names.map(normalize).includes(h)); const game=find(required.game), count=find(required.count), input=find(required.input), output=find(required.output); if([game,input,output].some(i=>i<0))throw Error('未找到“游戏名称、投入、产出”列。请确认导出的是游戏统计报表。');
+      const groups=new Map(); let records=0,totalPeople=0,totalInput=0,totalOutput=0; for(const row of rows.slice(headerIndex+1)){const name=String(row[game]??'').trim();if(!name||/^(合计|总计)$/i.test(name))continue;const i=number(row[input]),o=number(row[output]),people=count>=0?number(row[count]):1;const key=normalize(name),item=groups.get(key)||{name,input:0,output:0,count:0};item.input+=i;item.output+=o;item.count+=people;groups.set(key,item);records++;totalPeople+=people;totalInput+=i;totalOutput+=o;}
+      latestReportOrder=[...groups.values()].map(v=>({...v,ratio:v.input? v.output/v.input*100 : (v.output?Infinity:0)}));const list=[...latestReportOrder].sort((a,b)=>b.ratio-a.ratio); render(list,totalInput,totalOutput,totalPeople,records,filename);
     }
-    function render(list,totalInput,totalOutput,records,filename) {
-      $('gameCount').textContent=money.format(list.length);$('totalInput').textContent=money.format(totalInput);$('totalOutput').textContent=money.format(totalOutput);$('totalRows').textContent=money.format(records);$('tableHint').textContent=`已从 ${filename} 汇总 ${records} 条记录`;
-      latestSummary=list;body.innerHTML=list.map(x=>`<tr class="${x.ratio>100?'over':''}"><td>${escape(x.name)}</td><td class="number">${money.format(x.input)}</td><td class="number">${money.format(x.output)}</td><td class="number">${money.format(x.count)}</td><td class="number ratio">${Number.isFinite(x.ratio)?x.ratio.toFixed(2)+'%':'--'}</td></tr>`).join(''); analysis.classList.add('show');updateTencent();$('copyButton').onclick=async()=>{const out=['游戏名称\t总投入\t总产出\t总条数\t产投比',...list.map(x=>[x.name,x.input,x.output,x.count,Number.isFinite(x.ratio)?x.ratio.toFixed(2)+'%':'--'].join('\t'))].join('\n');try{await copyText(out);setStatus('排序分析结果已复制；它按产投比排序，不用于腾讯文档模板填表。');}catch{setStatus('复制失败，请检查浏览器是否允许复制。',true);}};
+    function render(list,totalInput,totalOutput,totalPeople,records,filename) {
+      $('gameCount').textContent=money.format(list.length);$('totalInput').textContent=money.format(totalInput);$('totalOutput').textContent=money.format(totalOutput);$('totalRows').textContent=money.format(totalPeople);$('tableHint').textContent=`已从 ${filename} 汇总 ${records} 条游戏记录`;$('templateOrder').textContent='报表游戏顺序：'+latestReportOrder.map(x=>x.name).join(' → ');
+      latestSummary=list;body.innerHTML=list.map(x=>`<tr class="${x.ratio>100?'over':''}"><td>${escape(x.name)}</td><td class="number">${money.format(x.input)}</td><td class="number">${money.format(x.output)}</td><td class="number">${money.format(x.count)}</td><td class="number ratio">${Number.isFinite(x.ratio)?x.ratio.toFixed(2)+'%':'--'}</td></tr>`).join(''); analysis.classList.add('show');updateTencent();$('copyButton').onclick=async()=>{const out=['游戏名称\t总投入\t总产出\t总人数\t产投比',...list.map(x=>[x.name,x.input,x.output,x.count,Number.isFinite(x.ratio)?x.ratio.toFixed(2)+'%':'--'].join('\t'))].join('\n');try{await copyText(out);setStatus('排序分析结果已复制；它按产投比排序，不用于腾讯文档模板填表。');}catch{setStatus('复制失败，请检查浏览器是否允许复制。',true);}};
     }
-    async function readFile(file) { try { setStatus('正在本地读取报表...'); const buf=await file.arrayBuffer(); const first=new DataView(buf).getUint32(0,true); let rows;if(first===0xE011CFD0)rows=xlsRows(buf);else rows=csvRows(new TextDecoder('utf-8',{fatal:false}).decode(buf));summarize(rows,file.name);setStatus('报表已在本地汇总，未上传到任何服务器。'); }catch(e){analysis.classList.remove('show');setStatus(e.message||'无法读取该报表。',true);} }
+    async function readFile(file) { try { setStatus('正在本地读取报表...');summarize(await rowsFromFile(file),file.name);setStatus('报表已在本地汇总，未上传到任何服务器。'); }catch(e){analysis.classList.remove('show');setStatus(e.message||'无法读取该报表。',true);} }
     $('fileInput').addEventListener('change',e=>e.target.files[0]&&readFile(e.target.files[0])); const zone=$('dropZone');['dragenter','dragover'].forEach(t=>zone.addEventListener(t,e=>{e.preventDefault();zone.classList.add('drag');}));['dragleave','drop'].forEach(t=>zone.addEventListener(t,e=>{e.preventDefault();zone.classList.remove('drag');}));zone.addEventListener('drop',e=>e.dataTransfer.files[0]&&readFile(e.dataTransfer.files[0]));
     $('refundFileInput').addEventListener('change',e=>e.target.files[0]&&readRefundFile(e.target.files[0]));const refundZone=$('refundDropZone');['dragenter','dragover'].forEach(t=>refundZone.addEventListener(t,e=>{e.preventDefault();refundZone.classList.add('drag');}));['dragleave','drop'].forEach(t=>refundZone.addEventListener(t,e=>{e.preventDefault();refundZone.classList.remove('drag');}));refundZone.addEventListener('drop',e=>e.dataTransfer.files[0]&&readRefundFile(e.dataTransfer.files[0]));
     $('refundBody').onchange=e=>{const select=e.target.closest('[data-refund-status]');if(!select)return;refundOutput[Number(select.dataset.refundStatus)][3]=select.value;};
