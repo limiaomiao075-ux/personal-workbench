@@ -215,14 +215,14 @@
     $('reportDate').innerHTML+=templateDates.map(x=>`<option value="${x.date}">${x.date}（${x.column}列）</option>`).join('');
     const required = { game:['游戏名称','游戏名','game name'], count:['人数','总人数','人次','总人次','count'], input:['投入','总投入','input'], output:['产出','总产出','output'] };
     const normalize = v => String(v ?? '').trim().toLowerCase().replace(/[\s_\-]/g, '');
-    const gameAliases=new Map([['果蔬','果蔬大作战']].map(([label,source])=>[normalize(label),normalize(source)]));
+    const gameAliases=new Map([['果蔬',['果蔬大作战']],['fishing',['FishingStar']]].map(([label,sources])=>[normalize(label),sources.map(normalize)]));
     const number = value => { const n = Number(String(value ?? '').replace(/[,%\s]/g, '')); return Number.isFinite(n) ? n : 0; };
     const setStatus = (text, bad=false) => { status.textContent=text; status.className='status'+(bad?' error':''); };
     const escape = v => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     async function copyText(text) { if(navigator.clipboard&&window.isSecureContext){try{await navigator.clipboard.writeText(text);return;}catch{}}const area=document.createElement('textarea');area.value=text;area.setAttribute('readonly','');area.style.cssText='position:fixed;opacity:0';document.body.append(area);area.select();const ok=document.execCommand('copy');area.remove();if(!ok)throw Error('复制失败'); }
     function tencentBlocks(list, column) {
       const lookup=new Map(list.map(x=>[normalize(x.name),x])),used=new Set(),blocks=[];missingCopyGames=[];
-      fixedGameOrder.forEach((label,index)=>{const key=normalize(label),sourceKey=gameAliases.get(key)||key,x=lookup.get(sourceKey);if(!x){missingCopyGames.push(label);return;}used.add(sourceKey);const start=83+index*4;blocks.push({name:label,start,end:start+2,target:`${column}${start}:${column}${start+2}`,text:[x.count,x.input,x.output].join('\n')});});
+      fixedGameOrder.forEach((label,index)=>{const key=normalize(label),sourceKey=[key,...(gameAliases.get(key)||[])].find(candidate=>lookup.has(candidate)),x=sourceKey?lookup.get(sourceKey):null;if(!x){missingCopyGames.push(label);return;}used.add(sourceKey);const start=83+index*4;blocks.push({name:label,start,end:start+2,target:`${column}${start}:${column}${start+2}`,text:[x.count,x.input,x.output].join('\n')});});
       list.filter(x=>!used.has(normalize(x.name))).forEach((x,extraIndex)=>{const index=fixedGameOrder.length+extraIndex,start=83+index*4;blocks.push({name:x.name,start,end:start+2,target:`${column}${start}:${column}${start+2}`,text:[x.count,x.input,x.output].join('\n')});});
       return blocks;
     }
